@@ -20,71 +20,23 @@ function register_admin_page() {
 }
 
 if (isset($_POST['action'])) {
-  if ($_POST['action'] === 'update_option_circleci_page') {
-    setOptionsPantheon($_POST);
-  }
-
   if ($_POST['action'] === 'trigger_build') {
     trigger_build();
-  }
-}
-
-function setOptionsPantheon($data){
-  if(!empty($data['circleci'])){
-    foreach($data['circleci'] as $key => $option) {
-      $option_name = '_pantheon_circleci_' . $key ;
-      
-      $new_value = is_array($option) ? serialize($option) : stripslashes($option);
-      if (get_option( $option_name ) !== false) {
-          // The option already exists, so we just update it.
-          update_option($option_name, $new_value);
-      } else {
-          // The option hasn't been added yet. We'll add it with $autoload set to 'no'.
-          $deprecated = null;
-          $autoload = 'no';
-          add_option($option_name, $new_value, $deprecated, $autoload);
-      }
-    }
-  }
-  
-  if(!isset($data['circleci']['token']) AND get_option( '_pantheon_circleci_token' ) !== false){
-    update_option('_pantheon_circleci_token', '');
   }
 }
 
 function build_hooks() {
 
   $site_url = site_url('');
-  $token = get_option('_pantheon_circleci_token');
+  $token = _getSecret('CIRCLE_CI_TOKEN');
   
   echo <<<EOF
 <div class="wrap">
   <h1>Build Hooks</h1>
+  ​<hr />
   <h2>CircleCI options</h2>
-  ​<hr />
-  <form method="post" action="$site_url/wp-admin/admin.php?page=build-hooks" novalidate="novalidate">
-    <table class="form-table">
-      <tbody>
-                <tr>
-                    <th scope="row">Token</th>
-          <td> 
-            <fieldset>
-              <legend class="screen-reader-text">Token</legend>
-                <input type="text" class="full-input" name="circleci[token]" value="$token" size="64">
-            </fieldset>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  ​
-      <div class="submit">
-          <input name="action" value="update_option_circleci_page" type="hidden">
-          <input name="submit" id="submit" class="button button-primary" value="Save changes" type="submit">
-      </div>
-  </form>
-
-  <h2>CircleCI Build</h2>
-  ​<hr />
+  <strong>Token:</strong> $token
+  <br />
   <form method="post" action="$site_url/wp-admin/admin.php?page=build-hooks" novalidate="novalidate">
     <div class="submit">
       <input name="action" value="trigger_build" type="hidden">
@@ -93,6 +45,14 @@ function build_hooks() {
   </form>
 </div>
 EOF;
+}
+
+function _getSecret($tokenName) {
+  define( 'TERMINUS_SECRETS', WP_CONTENT_DIR.'/uploads/private/secrets.json' );
+  $json = file_get_contents(TERMINUS_SECRETS);
+  $json_data = json_decode($json, true);
+
+  return $json_data[$tokenName];
 }
 
 function _getEnv() {
@@ -109,7 +69,7 @@ function trigger_build() {
   $buildMetadata = file_get_contents(__DIR__.'/../../../../build-metadata.json');
   $metadata = json_decode($buildMetadata, true);
 
-  $token = get_option('_pantheon_circleci_token');
+  $token = _getSecret('CIRCLE_CI_TOKEN');
 
   $branch = $metadata['ref'];
   $environment = _getEnv();
