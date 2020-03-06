@@ -5,7 +5,7 @@
  * Description: This module allows you to trigger a build hook on any service provider that supports build hooks.
 */
 
-require_once __DIR__.'/../../../../vendor/autoload.php';
+require_once ABSPATH.'/../../vendor/autoload.php';
 
 add_action( 'admin_menu', 'register_admin_page' );
 
@@ -26,10 +26,11 @@ if (isset($_POST['action'])) {
 }
 
 function build_hooks() {
-
   $site_url = site_url('');
   $token = _getSecret('CIRCLE_CI_TOKEN');
-  
+  $stars = str_repeat('*', strlen($token)-4);
+  $token = substr_replace($token, $stars, 2, -2);
+
   echo <<<EOF
 <div class="wrap">
   <h1>Build Hooks</h1>
@@ -48,9 +49,8 @@ EOF;
 }
 
 function _getSecret($tokenName) {
-  define( 'TERMINUS_SECRETS', WP_CONTENT_DIR.'/uploads/private/secrets.json' );
-  $json = file_get_contents(TERMINUS_SECRETS);
-  $json_data = json_decode($json, true);
+  $secrets_file = file_get_contents(WP_CONTENT_DIR.'/uploads/private/secrets.json');
+  $json_data = json_decode($secrets_file, true);
 
   return $json_data[$tokenName];
 }
@@ -65,9 +65,8 @@ function _getEnv() {
 }
 
 function trigger_build() {
-
-  $buildMetadata = file_get_contents(__DIR__.'/../../../../build-metadata.json');
-  $metadata = json_decode($buildMetadata, true);
+  $metadata_file = ABSPATH.'/../../build-metadata.json';
+  $metadata = json_decode(file_get_contents($metadata_file), true);
 
   $token = _getSecret('CIRCLE_CI_TOKEN');
 
@@ -91,14 +90,5 @@ function trigger_build() {
         ]
       ]
     ]
-  );  
-}
-
-function set_option($option_name, $option_value) {
-  if (get_option($option_name) !== false) {
-      update_option($option_name, $option_value);
-      retturn;
-  }
-
-  add_option($option_name, $option_value, null, 'no');
+  );
 }
