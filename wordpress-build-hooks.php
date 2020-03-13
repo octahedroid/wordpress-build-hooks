@@ -2,7 +2,7 @@
 
 /**
  * Plugin Name: Build Hooks
- * Description: This module allows you to trigger a build hook on any service provider that supports build hooks.
+ * Description: This plugin allows you to trigger a build hook on CircleCI service.
 */
 
 require_once ABSPATH.'/../../vendor/autoload.php';
